@@ -1,0 +1,14 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment variables (sensitive keys!)
+.env
+python-chatbot/.env
+
+# Local output files
+python-chatbot/output/
+
+# n8n execution data
+.n8n/

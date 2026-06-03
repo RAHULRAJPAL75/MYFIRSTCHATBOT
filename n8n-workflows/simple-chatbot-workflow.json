@@ -1,5 +1,5 @@
 {
-  "name": "Simple AI Chatbot Workflow",
+  "name": "Advanced AI Chatbot Workflow (OpenAI & Anthropic)",
   "nodes": [
     {
       "parameters": {
@@ -9,64 +9,124 @@
         "options": {}
       },
       "id": "webhook-node",
-      "name": "Webhook",
+      "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.provider }}",
+              "value2": "anthropic"
+            }
+          ]
+        }
+      },
+      "id": "provider-router",
+      "name": "Is Anthropic?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [320, 300]
     },
     {
       "parameters": {
         "resource": "chat",
         "operation": "message",
-        "model": "gpt-3.5-turbo",
+        "model": "={{ $json.model || 'gpt-4o' }}",
         "messages": {
           "messageValues": [
             {
               "role": "system",
-              "content": "You are a helpful AI assistant."
+              "content": "You are a helpful and intelligent AI assistant powered by OpenAI via n8n."
             },
             {
               "role": "user",
-              "content": "={{ $json.message }}"
+              "content": "={{ $('Webhook Trigger').item.json.message }}"
             }
           ]
         },
         "options": {
-          "maxTokens": 150,
           "temperature": 0.7
         }
       },
-      "id": "openai-node",
-      "name": "OpenAI",
+      "id": "openai-chat-node",
+      "name": "OpenAI Chat",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1,
-      "position": [460, 300]
+      "position": [550, 200]
+    },
+    {
+      "parameters": {
+        "model": "={{ $json.model || 'claude-3-5-sonnet-20241022' }}",
+        "prompt": "={{ $('Webhook Trigger').item.json.message }}",
+        "options": {
+          "system": "You are a helpful and intelligent AI assistant powered by Anthropic Claude via n8n.",
+          "temperature": 0.7
+        }
+      },
+      "id": "anthropic-chat-node",
+      "name": "Anthropic Chat",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [550, 420]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { \"response\": $json.choices[0].message.content } }}"
+        "responseBody": "={\n  \"status\": \"success\",\n  \"provider\": \"{{ $json.provider || 'openai' }}\",\n  \"model\": \"{{ $json.model || 'default' }}\",\n  \"response\": \"{{ $json.choices ? $json.choices[0].message.content : $json.content[0].text }}\",\n  \"timestamp\": \"{{ new Date().toISOString() }}\"\n}"
       },
       "id": "respond-node",
       "name": "Respond to Webhook",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [680, 300]
+      "position": [820, 300]
     }
   ],
   "connections": {
-    "Webhook": {
+    "Webhook Trigger": {
       "main": [
         [
           {
-            "node": "OpenAI",
+            "node": "Is Anthropic?",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "OpenAI": {
+    "Is Anthropic?": {
+      "main": [
+        [
+          {
+            "node": "Anthropic Chat",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "OpenAI Chat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat": {
       "main": [
         [
           {
@@ -80,5 +140,5 @@
   },
   "active": false,
   "settings": {},
-  "versionId": "1"
+  "versionId": "2"
 }

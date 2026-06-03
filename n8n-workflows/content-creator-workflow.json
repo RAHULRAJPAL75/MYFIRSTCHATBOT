@@ -1,5 +1,5 @@
 {
-  "name": "Content Creator Agent",
+  "name": "Advanced Content Creator Agent Workflow",
   "nodes": [
     {
       "parameters": {
@@ -8,64 +8,89 @@
         "responseMode": "responseNode"
       },
       "id": "webhook-trigger",
-      "name": "Content Request",
+      "name": "Webhook Trigger",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
-      "position": [240, 300]
+      "position": [100, 300]
+    },
+    {
+      "parameters": {
+        "model": "claude-3-5-sonnet-20241022",
+        "prompt": "=Create a detailed structural outline for a {{ $json.content_type }} about the topic: \"{{ $json.topic }}\". Target audience is {{ $json.audience }}. Focus on high-level sections, key points, and SEO recommendations.",
+        "options": {
+          "system": "You are a professional content strategist and editor. Create high-quality structured outlines.",
+          "temperature": 0.5
+        }
+      },
+      "id": "anthropic-outline-node",
+      "name": "Generate Outline",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [320, 300]
     },
     {
       "parameters": {
         "resource": "chat",
         "operation": "message",
-        "model": "gpt-3.5-turbo",
+        "model": "gpt-4o",
         "messages": {
           "messageValues": [
             {
               "role": "system",
-              "content": "You are a creative content creator. Generate engaging content based on the topic and type requested."
+              "content": "You are an expert copywriter. Write full, highly-engaging markdown content using provided outlines and parameters."
             },
             {
               "role": "user",
-              "content": "Create {{ $json.content_type }} content about {{ $json.topic }}. Target audience: {{ $json.audience }}. Tone: {{ $json.tone }}."
+              "content": "=Write the final content of type \"{{ $('Webhook Trigger').item.json.content_type }}\" about \"{{ $('Webhook Trigger').item.json.topic }}\". Use the outline below as a guide:\n\n{{ $json.content[0].text }}\n\nTone: {{ $('Webhook Trigger').item.json.tone }}\nTarget Audience: {{ $('Webhook Trigger').item.json.audience }}"
             }
           ]
         },
         "options": {
-          "maxTokens": 500,
           "temperature": 0.8
         }
       },
-      "id": "content-generator",
-      "name": "Generate Content",
+      "id": "openai-draft-node",
+      "name": "Generate Draft",
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1,
-      "position": [460, 300]
+      "position": [550, 300]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { \"generated_content\": $json.choices[0].message.content, \"topic\": $('Content Request').item.json.topic, \"content_type\": $('Content Request').item.json.content_type } }}"
+        "responseBody": "={\n  \"status\": \"success\",\n  \"topic\": \"{{ $('Webhook Trigger').item.json.topic }}\",\n  \"content_type\": \"{{ $('Webhook Trigger').item.json.content_type }}\",\n  \"outline\": \"{{ $('Generate Outline').item.json.content[0].text.replace(/\\n/g, '\\\\n') }}\",\n  \"final_content\": \"{{ $json.choices[0].message.content.replace(/\\n/g, '\\\\n') }}\",\n  \"timestamp\": \"{{ new Date().toISOString() }}\"\n}"
       },
       "id": "respond-content",
       "name": "Return Content",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [680, 300]
+      "position": [780, 300]
     }
   ],
   "connections": {
-    "Content Request": {
+    "Webhook Trigger": {
       "main": [
         [
           {
-            "node": "Generate Content",
+            "node": "Generate Outline",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Generate Content": {
+    "Generate Outline": {
+      "main": [
+        [
+          {
+            "node": "Generate Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Draft": {
       "main": [
         [
           {
@@ -79,5 +104,5 @@
   },
   "active": false,
   "settings": {},
-  "versionId": "1"
+  "versionId": "2"
 }

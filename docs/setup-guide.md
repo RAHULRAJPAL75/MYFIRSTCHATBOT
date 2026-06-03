@@ -1,60 +1,99 @@
-# Setup Guide
+# Setup Guide (2026 Edition)
 
-## Python Chatbot Setup
+Follow these instructions to set up the Python AI engines, configuration keys, and n8n workflows.
 
-### 1. Simple Chatbot (No API Required)
+---
+
+## 🔑 1. Environment Keys Configuration
+
+1. Locate the file `python-chatbot/.env.example`.
+2. Copy/rename it to `python-chatbot/.env`:
+   ```bash
+   cp python-chatbot/.env.example python-chatbot/.env
+   ```
+3. Open `.env` and fill in your API key values:
+   ```env
+   OPENAI_API_KEY=sk-proj-yourOpenAiKeyHere...
+   ANTHROPIC_API_KEY=sk-ant-api03-yourAnthropicKeyHere...
+   ```
+
+---
+
+## 🐍 2. Python Environment Setup
+
+We recommend using a Python virtual environment.
+
 ```bash
+# Navigate to the python directory
 cd python-chatbot
-python chatbot.py
+
+# Create a virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# Windows:
+venv\Scripts\activate
+# macOS/Linux:
+source venv/bin/activate
+
+# Install requirements
+pip install -r requirements.txt
 ```
 
-### 2. AI Chatbot (Requires OpenAI API)
-1. Copy `.env.example` to `.env`
-2. Add your OpenAI API key to `.env`
-3. Install dependencies: `pip install -r requirements.txt`
-4. Run: `python ai_chatbot.py`
+### Running the Python CLI Chatbot (Multi-Provider)
+Start the interactive session:
+```bash
+python ai_chatbot.py
+```
+*Options:* Select your provider (OpenAI / Anthropic), switch models mid-conversation by typing `switch`, or exit by typing `quit`.
 
-## n8n Workflow Setup
+### Running the Content Creator Agent CLI
+To generate content interactively:
+```bash
+python content_creator.py
+```
+To generate content automatically via command line arguments:
+```bash
+python content_creator.py "Topic Title" "Blog Post" "Developers" "Professional" "openai"
+```
+Generated content will be saved automatically in `python-chatbot/output/` as markdown files.
 
-### Installation
+---
+
+## ⚙️ 3. n8n Automation Workflows Setup
+
+### Prerequisites
+Install Node.js (v18+) and npm on your system.
+
+### Installing and Launching n8n
+Install globally:
 ```bash
 npm install -g n8n
 ```
+Start n8n:
+* Double-click `start-n8n.bat` in the project root OR
+* Run `n8n start` in your terminal.
 
-### Running n8n
+### Importing Workflow JSON Templates
+1. Open n8n in your web browser (typically `http://localhost:5678`).
+2. Click **Workflows** on the left menu, then click **Add Workflow** (or **New**).
+3. Open the workflow settings and choose **Import from File**.
+4. Import the templates:
+   - `n8n-workflows/simple-chatbot-workflow.json`
+   - `n8n-workflows/content-creator-workflow.json`
+5. Configure your Credentials:
+   - Double-click the **OpenAI** / **Anthropic** chat nodes and select/create your API credentials.
+6. Click **Activate** (top-right toggle switch) to enable webhook triggers.
+
+---
+
+## 🧪 4. Testing Your Setup
+
+Use the built-in test scripts:
 ```bash
-n8n start
-```
+# Run local CLI chatbot verification
+python examples/test_chatbot.py
 
-### Importing Workflows
-1. Open n8n in browser (usually http://localhost:5678)
-2. Go to Workflows > Import from File
-3. Select workflow JSON files from `n8n-workflows/` folder
-
-### API Usage Examples
-
-#### Chatbot Webhook
-```bash
-curl -X POST http://localhost:5678/webhook/chatbot \
-  -H "Content-Type: application/json" \
-  -d '{"message": "Hello, how are you?"}'
-```
-
-#### Content Creator Webhook
-```bash
-curl -X POST http://localhost:5678/webhook/content-creator \
-  -H "Content-Type: application/json" \
-  -d '{
-    "topic": "artificial intelligence",
-    "content_type": "blog post",
-    "audience": "developers",
-    "tone": "professional"
-  }'
-```
-
-## Environment Variables
-Create `.env` file in `python-chatbot/` directory:
-```
-OPENAI_API_KEY=your_openai_api_key_here
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
+# Run unified API and n8n webhook communication check
+python examples/test_ai_services.py
 ```
